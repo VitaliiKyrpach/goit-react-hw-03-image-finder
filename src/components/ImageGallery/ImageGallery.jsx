@@ -1,13 +1,14 @@
 import { ImageGalleryItem } from '../ImageGalleryItem/ImageGalleryItem';
-export const ImageGallery = ({ data }) => {
-  console.log(data);
+export const ImageGallery = ({ photos, showModal }) => {
   return (
     <ul className="ImageGallery">
-      {data.map(pic => (
+      {photos.map(pic => (
         <ImageGalleryItem
           key={pic.id}
+          id={pic.id}
           smImage={pic.webformatURL}
           bgImage={pic.largeImageURL}
+          modal={showModal}
         />
       ))}
     </ul>

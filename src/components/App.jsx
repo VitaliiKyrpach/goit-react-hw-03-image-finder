@@ -1,52 +1,80 @@
 import React, { Component } from 'react';
-import { Searchbar } from './Searchbar/Searchbar';
-import { fetch } from '../services/api';
+import Searchbar from './Searchbar/Searchbar';
+import { getPhotos } from '../services/api';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Loader } from './Loader/Loader';
 import { Button } from './Button/Button';
+import Modal from './Modal/Modal';
 
 class App extends Component {
   state = {
-    arr: [],
+    arr: null,
     query: '',
     isLoading: false,
     currentPage: 1,
+    error: '',
+    loadMore: false,
+    isModal: false,
+    modalImg: null,
   };
-  // async componentDidMount() {
-  //   console.log(this.state.query);
-  //   const data = await fetch(this.state.query);
-  //   console.log(data);
-  // }
+
   async componentDidUpdate(_, prevState) {
     if (prevState.query !== this.state.query) {
       this.setState({ isLoading: true, currentPage: 1 });
-      const data = await fetch(this.state.query, 1);
-      this.setState({ arr: data.data.hits, isLoading: false });
-      return;
+      const data = await getPhotos(this.state.query, 1);
+      this.setState({
+        arr: data.data.hits,
+        isLoading: false,
+        loadMore: this.state.currentPage < Math.ceil(data.data.totalHits / 45),
+      });
     }
-    if (prevState.currentPage !== this.state.currentPage) {
-      console.log(this.state.currentPage);
-      const data = await fetch(this.state.query, this.state.currentPage);
-      this.setState(prev => ({ arr: [...prev.arr, ...data.data.hits] }));
+    if (
+      prevState.currentPage !== this.state.currentPage &&
+      this.state.currentPage !== 1
+    ) {
+      const data = await getPhotos(this.state.query, this.state.currentPage);
+      this.setState(prev => ({
+        arr: [...prev.arr, ...data.data.hits],
+        loadMore: this.state.currentPage < Math.ceil(data.data.totalHits / 12),
+      }));
     }
   }
-  handleSubmit = e => {
-    e.preventDefault();
-    console.log(e.target.lastChild.value);
-    this.setState({ query: e.target.lastChild.value });
+
+  // fetch = async () => {
+  //   this.setState({ isLoading: true });
+  //   try {
+  //     const response = await getPhotos(
+  //       this.state.query,
+  //       this.state.currentPage
+  //     );
+  //     return response.data.hits;
+  //   } catch ({ message }) {
+  //     this.setState({ error: message });
+  //   } finally {
+  //     this.setState({ isLoading: false });
+  //   }
+  // };
+
+  onSubmit = query => {
+    this.setState({ query });
   };
   handleClick = () => {
-    this.setState(prev => ({
-      currentPage: prev.currentPage + 1,
-    }));
+    this.setState(prev => ({ currentPage: prev.currentPage + 1 }));
+  };
+  toggleModal = bgImage => {
+    this.setState(prev => ({ isModal: !prev.isModal, modalImg: bgImage }));
   };
   render() {
+    const { isLoading, arr, loadMore, isModal } = this.state;
     return (
       <div>
-        <Searchbar onSubmit={this.handleSubmit} />
-        {this.state.isLoading && <Loader />}
-        <ImageGallery data={this.state.arr} />
-        <Button handleClick={this.handleClick} />
+        <Searchbar onSubmit={this.onSubmit} />
+        {isLoading && <Loader />}
+        {arr && <ImageGallery photos={arr} showModal={this.toggleModal} />}
+        {loadMore && <Button handleClick={this.handleClick} />}
+        {isModal && (
+          <Modal image={this.state.modalImg} toggle={this.toggleModal} />
+        )}
       </div>
     );
   }
